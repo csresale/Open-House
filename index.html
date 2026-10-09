@@ -59,7 +59,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 
 .brand img { display: block; width: min(100%, 24rem); height: auto; }
 .hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.25rem; align-items: center; }
 .me { width: 9.5rem; height: 11rem; border-radius: 18px; background: #E6EBF3; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
-.me img { display: block; width: 100%; height: auto; }
+.me img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
 @media (max-width: 32rem) { .me { width: 6.5rem; height: 7.5rem; } }
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 1.5rem; display: grid; gap: 1.25rem; }
@@ -105,6 +105,29 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); outline
   min-height: 2.75rem; padding: 0.4rem 1rem; border-radius: 999px; border: 1px solid var(--line);
   background: var(--surface); color: var(--muted); font-size: 0.9rem; font-weight: 600; cursor: pointer;
 }
+
+/* Layout: roomier when portrait, two columns when landscape */
+@media (min-width: 40rem) {
+  #guestView { max-width: 52rem; }
+  #guestView .me { width: 11rem; height: 12.75rem; }
+}
+@media (min-width: 62rem) {
+  body { padding-block: 2rem 5rem; }
+  #guestView {
+    max-width: 76rem; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-areas: "brand form" "hero form" "status form"; grid-template-rows: auto auto 1fr;
+    column-gap: 2.5rem; row-gap: 1.5rem; align-items: start;
+  }
+  #guestView .brand { grid-area: brand; }
+  #guestView .hero { grid-area: hero; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+  #guestView .hero .me { width: 100%; max-width: 17rem; height: 19.5rem; }
+  #guestView #form { grid-area: form; }
+  #guestView .status { grid-area: status; align-self: end; }
+}
+@media (max-height: 560px) { .tick { width: 4.5rem; height: 4.5rem; } .thanks-body { gap: 0.7rem; } .thanks h2 { font-size: 2rem; } }
+
+.del { min-height: 2.6rem; font-size: 0.9rem; padding-inline: 1rem; margin-top: 0.4rem; }
+.del.armed { border-color: var(--warn); color: var(--warn); font-weight: 700; }
 
 /* Thank-you screen */
 .thanks { position: fixed; inset: 0; z-index: 30; background: var(--surface); color: var(--ink); display: grid; grid-template-rows: 1fr auto; padding-inline: 1.5rem; padding-block: calc(1.5rem + env(safe-area-inset-top, 0px)) calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
@@ -212,6 +235,15 @@ img { max-width: 100%; }
       </div>
     </div>
 
+    <div class="field" role="radiogroup" aria-labelledby="paLbl">
+      <span class="lbl" id="paLbl">Are you pre-approved for a mortgage? <span class="opt">(optional)</span></span>
+      <div class="choices">
+        <input type="radio" name="preapproved" id="pa1" value="Yes"><label for="pa1">Yes</label>
+        <input type="radio" name="preapproved" id="pa2" value="No"><label for="pa2">No</label>
+        <input type="radio" name="preapproved" id="pa3" value="Not sure"><label for="pa3">Not sure</label>
+      </div>
+    </div>
+
     <div class="field">
       <label class="lbl" for="notes">Anything you want me to know? <span class="opt">(optional)</span></label>
       <textarea id="notes" autocapitalize="sentences"></textarea>
@@ -308,7 +340,7 @@ img { max-width: 100%; }
     state.guests.push({
       id: "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       eventId: state.eventId, first: first, last: last, phone: phone, email: email,
-      agent: radio("agent"), timeline: radio("timeline"), notes: val("notes"), at: Date.now()
+      agent: radio("agent"), timeline: radio("timeline"), preapproved: radio("preapproved"), notes: val("notes"), at: Date.now()
     });
     save();
     $("form").reset();
@@ -390,6 +422,7 @@ img { max-width: 100%; }
       $("lockBtn").addEventListener("click", function () { unlocked = false; renderHost(); });
       $("evSel").addEventListener("change", function () { viewEvent = $("evSel").value; fillAddr(); updateOpen(true); });
       $("exportBtn").addEventListener("click", exportCsv);
+      $("list").addEventListener("click", onListClick);
       $("addrSave").addEventListener("click", function () {
         var a = $("addrEdit").value.trim(), m = $("hostMsg"), ev = eventById(viewEvent);
         if (!a || !ev) return;
@@ -409,6 +442,15 @@ img { max-width: 100%; }
     }
   }
 
+    function onListClick(e) {
+    var b = e.target && e.target.closest ? e.target.closest(".del") : null;
+    if (!b) return;
+    if (b.classList.contains("armed")) { removeGuest(b.getAttribute("data-id")); return; }
+    b.classList.add("armed"); b.textContent = "Tap again to delete";
+    setTimeout(function () { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Delete"; } }, 4000);
+  }
+  function removeGuest(id) { state.guests = state.guests.filter(function (g) { return g.id !== id; }); save(); renderGuest(); updateOpen(true); }
+
   function fillAddr() { var ev = eventById(viewEvent), el = $("addrEdit"); if (el) el.value = ev && ev.address ? ev.address : ""; }
   function fmtTime(ms) { try { return new Date(ms).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); } catch (e) { return ""; } }
   function eventGuests() { return state.guests.filter(function (g) { return g.eventId === viewEvent; }).sort(function (a, b) { return b.at - a.at; }); }
@@ -425,10 +467,12 @@ img { max-width: 100%; }
     var list = eventGuests();
     var noAgent = list.filter(function (g) { return g.agent === "No"; }).length;
     var ready = list.filter(function (g) { return g.timeline === "Ready now" || g.timeline === "1 to 3 months"; }).length;
+    var pre = list.filter(function (g) { return g.preapproved === "Yes"; }).length;
     $("stats").innerHTML =
       '<span class="stat"><b>' + list.length + "</b>sign-ins</span>" +
       '<span class="stat"><b>' + noAgent + "</b>no agent</span>" +
-      '<span class="stat"><b>' + ready + "</b>buying within 3 months</span>";
+      '<span class="stat"><b>' + ready + "</b>buying within 3 months</span>" +
+      '<span class="stat"><b>' + pre + "</b>pre-approved</span>";
     $("exportBtn").disabled = !list.length;
     if (!list.length) { $("list").innerHTML = '<p class="empty">No one has signed in yet. Guests will show up here as they sign in on the iPad.</p>'; return; }
     $("list").innerHTML = list.map(function (g) {
@@ -436,11 +480,13 @@ img { max-width: 100%; }
       var tags = "";
       if (g.agent) tags += '<span class="tag">' + (g.agent === "Yes" ? "Has an agent" : "No agent") + "</span>";
       if (g.timeline) tags += '<span class="tag">' + esc(g.timeline) + "</span>";
+      if (g.preapproved) tags += '<span class="tag">' + (g.preapproved === "Yes" ? "Pre-approved" : g.preapproved === "No" ? "Not pre-approved" : "Pre-approval not sure") + "</span>";
       return '<div class="guest"><div class="nm"><span>' + name + '</span><span class="when">' + esc(fmtTime(g.at)) + "</span></div>" +
         (g.phone ? '<div class="ct">' + esc(g.phone) + "</div>" : "") +
         (g.email ? '<div class="ct">' + esc(g.email) + "</div>" : "") +
         (tags ? '<div class="tags">' + tags + "</div>" : "") +
-        (g.notes ? '<div class="note">' + esc(g.notes) + "</div>" : "") + "</div>";
+        (g.notes ? '<div class="note">' + esc(g.notes) + "</div>" : "") +
+        '<div><button class="btn ghost del" type="button" data-id="' + esc(g.id) + '">Delete</button></div></div>';
     }).join("");
   }
 
@@ -456,9 +502,9 @@ img { max-width: 100%; }
     var list = eventGuests().slice().sort(function (a, b) { return a.at - b.at; });
     if (!list.length) return;
     var ev = eventById(viewEvent);
-    var rows = [["Signed in", "First name", "Last name", "Phone", "Email", "Working with an agent", "Timeline", "Notes"].map(function (h) { return csvCell(h); }).join(",")];
+    var rows = [["Signed in", "First name", "Last name", "Phone", "Email", "Working with an agent", "Timeline", "Pre-approved", "Notes"].map(function (h) { return csvCell(h); }).join(",")];
     list.forEach(function (g) {
-      rows.push([csvCell(fmtTime(g.at)), csvCell(g.first), csvCell(g.last), csvCell(g.phone, true), csvCell(g.email), csvCell(g.agent), csvCell(g.timeline), csvCell(g.notes)].join(","));
+      rows.push([csvCell(fmtTime(g.at)), csvCell(g.first), csvCell(g.last), csvCell(g.phone, true), csvCell(g.email), csvCell(g.agent), csvCell(g.timeline), csvCell(g.preapproved), csvCell(g.notes)].join(","));
     });
     var slug = ((ev && ev.address) || "open-house").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "open-house";
     var name = "open-house-" + slug + ".csv";
