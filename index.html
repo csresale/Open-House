@@ -166,6 +166,8 @@ body { min-height: 100dvh; overscroll-behavior: none; padding-block: clamp(0.5re
 /* Address suggestions (host setup) */
 .sugg { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
 .sugg:empty { display: none; }
+.sugg + p.fine { margin: 0.4rem 0 0; padding-top: 0.35rem; border-top: 1px solid var(--line); text-align: right; font-size: 0.8rem; }
+.sugg:empty + p.fine { display: none; }
 .sugg button { width: 100%; text-align: left; min-height: 3rem; padding: 0.55rem 0.9rem; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 1rem; cursor: pointer; }
 .sugg button:hover, .sugg button:focus-visible { border-color: var(--accent); background: var(--accent-soft); outline: none; }
 
@@ -665,6 +667,7 @@ img { max-width: 100%; }
     if (!input || !window.fetch) return;
     var list = document.createElement("ul"); list.className = "sugg"; list.setAttribute("aria-label", "Address suggestions");
     input.parentNode.appendChild(list);
+    var note = document.createElement("p"); note.className = "fine"; note.style.textAlign = "right"; input.parentNode.appendChild(note);
     var timer = 0, seq = 0;
     function line(p) {
       var street = [p.housenumber, p.street].filter(Boolean).join(" ") || p.name || "";
@@ -679,7 +682,7 @@ img { max-width: 100%; }
         method: "POST", referrerPolicy: "no-referrer-when-downgrade",
         headers: { "Content-Type": "application/json", "X-Goog-Api-Key": GKEY },
         body: JSON.stringify({ input: q, sessionToken: token, includedRegionCodes: ["us"], locationBias: { circle: { center: { latitude: 41.9, longitude: -87.85 }, radius: 50000 } } })
-      }).then(function (r) { if (!r.ok) throw new Error("g" + r.status); return r.json(); }).then(function (d) {
+      }).then(function (r) { if (!r.ok) { return r.json().catch(function () { return {}; }).then(function (j) { throw new Error("Google " + r.status + (j && j.error && j.error.message ? ": " + String(j.error.message).slice(0, 110) : "")); }); } return r.json(); }).then(function (d) {
         var all = (d.suggestions || []).map(function (s) { return s.placePrediction; }).filter(Boolean);
         var addr = all.filter(function (p) { var t = p.types || []; return t.indexOf("street_address") >= 0 || t.indexOf("premise") >= 0 || t.indexOf("subpremise") >= 0; });
         return (addr.length ? addr : all).map(function (p) { return ((p.text && p.text.text) || "").replace(/,\s*USA$/, ""); }).filter(Boolean);
@@ -713,7 +716,7 @@ img { max-width: 100%; }
       if (q.length < 4) { list.innerHTML = ""; return; }
       timer = setTimeout(function () {
         var my = ++seq;
-        googleSuggest(q).then(function (r) { return r.length ? r : photonSuggest(q); }, function () { return photonSuggest(q); })
+        googleSuggest(q).then(function (r) { note.textContent = r.length ? "Powered by Google" : "Backup search in use (no Google results)"; return r.length ? r : photonSuggest(q); }, function (e) { note.textContent = "Backup search in use (" + ((e && e.message) || "offline") + ")"; return photonSuggest(q); })
           .then(function (out) { if (my === seq) show(out.slice(0, 5)); })
           .catch(function () { if (my === seq) list.innerHTML = ""; });
       }, 350);
