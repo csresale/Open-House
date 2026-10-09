@@ -43,7 +43,7 @@
 * { box-sizing: border-box; }
 body {
   background: var(--bg); color: var(--ink);
-  font-family: var(--font-body); font-size: 18px; line-height: 1.45;
+  font-family: var(--font-body); font-size: 1.125rem; line-height: 1.45;
   padding-inline: 1.25rem; padding-block: 1.5rem 5rem;
   -webkit-text-size-adjust: 100%;
 }
@@ -131,7 +131,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); outline
 
 /* One-screen fit: no scrolling on iPad in either orientation */
 :root { --gap: clamp(0.4rem, 1.7dvh, 1.2rem); --ctl: clamp(2.5rem, 6.1dvh, 3.5rem); }
-html { height: 100%; }
+html { height: 100%; font-size: 16px; -webkit-text-size-adjust: 100%; }
 body { min-height: 100dvh; overscroll-behavior: none; padding-block: clamp(0.5rem, 1.6dvh, 1.25rem) 3.1rem; }
 #guestView { gap: var(--gap); }
 #guestView .card { padding: clamp(0.75rem, 2dvh, 1.4rem) clamp(1rem, 2.2vw, 1.5rem); gap: var(--gap); }
@@ -577,6 +577,32 @@ img { max-width: 100%; }
 
   renderGuest();
 })();
+
+  /* Auto-fit: shrink everything (rem based) until the sign-in screen fits the visible height. Works around Safari's toolbars. */
+  (function () {
+    var root = document.documentElement, guest = document.getElementById("guestView"), pending = 0;
+    function need() {
+      var r = guest.getBoundingClientRect();
+      var pad = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
+      return Math.max(r.bottom + window.pageYOffset + pad, 0);
+    }
+    function fit() {
+      pending = 0;
+      if (guest.hidden || guest.offsetParent === null) return;
+      var h = window.visualViewport ? Math.min(window.innerHeight, window.visualViewport.height) : window.innerHeight;
+      var s = 16; root.style.fontSize = s + "px";
+      while (s > 8 && (need() > h + 0.5 || root.scrollWidth > window.innerWidth + 1)) { s -= 0.5; root.style.fontSize = s + "px"; }
+    }
+    function sched() { if (!pending) pending = requestAnimationFrame(fit); }
+    window.addEventListener("resize", sched);
+    window.addEventListener("orientationchange", function () { setTimeout(fit, 250); });
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", sched);
+    window.addEventListener("load", function () { fit(); setTimeout(fit, 400); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    new MutationObserver(sched).observe(guest, { attributes: true, attributeFilter: ["hidden", "class", "style"] });
+    var f = document.getElementById("form"); if (f) new MutationObserver(sched).observe(f, { childList: true, subtree: true, characterData: true });
+    fit();
+  })();
 </script>
 </body>
 </html>
