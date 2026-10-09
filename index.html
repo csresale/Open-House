@@ -243,19 +243,19 @@ img { max-width: 100%; }
     <div class="grid2">
       <div class="field">
         <label class="lbl" for="first">First name</label>
-        <input type="text" id="first" autocapitalize="words" autocomplete="off" enterkeyhint="next">
+        <input type="text" id="first" autocorrect="off" spellcheck="false" autocapitalize="words" autocomplete="off" enterkeyhint="next">
       </div>
       <div class="field">
         <label class="lbl" for="last">Last name</label>
-        <input type="text" id="last" autocapitalize="words" autocomplete="off" enterkeyhint="next">
+        <input type="text" id="last" autocorrect="off" spellcheck="false" autocapitalize="words" autocomplete="off" enterkeyhint="next">
       </div>
       <div class="field">
         <label class="lbl" for="phone">Mobile phone</label>
-        <input type="tel" id="phone" inputmode="tel" autocomplete="off" enterkeyhint="next">
+        <input type="tel" id="phone" autocorrect="off" spellcheck="false" inputmode="tel" autocomplete="off" enterkeyhint="next">
       </div>
       <div class="field">
         <label class="lbl" for="email">Email</label>
-        <input type="email" id="email" inputmode="email" autocapitalize="none" autocorrect="off" autocomplete="off" enterkeyhint="done">
+        <input type="email" id="email" autocorrect="off" spellcheck="false" inputmode="email" autocapitalize="none" autocorrect="off" autocomplete="off" enterkeyhint="done">
       </div>
     </div>
 
@@ -288,7 +288,7 @@ img { max-width: 100%; }
 
     <div class="field">
       <label class="lbl" for="notes">Anything you want me to know? <span class="opt">(optional)</span></label>
-      <textarea id="notes" autocapitalize="sentences"></textarea>
+      <textarea id="notes" autocorrect="off" spellcheck="false" autocapitalize="sentences"></textarea>
     </div>
 
     <p class="msg" id="formMsg" role="status" aria-live="polite"></p>
@@ -404,7 +404,7 @@ img { max-width: 100%; }
   $("hostBtn").addEventListener("click", function () { $("sheet").hidden = false; lastStage = ""; renderHost(); });
   $("closeHost").addEventListener("click", function () { $("sheet").hidden = true; unlocked = false; lastStage = ""; });
 
-  function stage() { if (!state.pin) return "setup"; return unlocked ? "open" : "lock"; }
+  function stage() { if (!state.pin || !state.events.length) return "setup"; return unlocked ? "open" : "lock"; }
   function renderHost() {
     if ($("sheet").hidden) return;
     var s = stage();
@@ -501,6 +501,12 @@ img { max-width: 100%; }
         if (state.eventId === id) {
           var rest = state.events.slice().sort(function (x, y) { return y.startedAt - x.startedAt; });
           state.eventId = rest.length ? rest[0].id : "";
+        }
+        if (!state.events.length) {
+          state.eventId = ""; state.pin = ""; viewEvent = ""; unlocked = false; lastStage = "";
+          save(); renderGuest(); renderHost();
+          var fa = $("setAddr"); if (fa) fa.focus();
+          return;
         }
         viewEvent = state.eventId; save(); renderGuest(); updateOpen(); fillAddr();
         b.classList.remove("armed"); b.textContent = "Delete open house";
@@ -660,6 +666,12 @@ img { max-width: 100%; }
       var n = i + (e.shiftKey ? -1 : 1);
       if (n < 0 || n >= list.length) return;
       e.preventDefault(); list[n].focus();
+    });
+  })();
+  (function () {
+    ["first", "last", "phone"].forEach(function (id, k, arr) {
+      var el = document.getElementById(id), nx = document.getElementById(["last", "phone", "email"][k]);
+      if (el && nx) el.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); nx.focus(); } });
     });
   })();
 
