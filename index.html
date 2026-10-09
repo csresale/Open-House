@@ -672,13 +672,38 @@ img { max-width: 100%; }
       var tail = [p.city || p.district || p.county, [st, p.postcode].filter(Boolean).join(" ")].filter(Boolean).join(", ");
       return [street, tail].filter(Boolean).join(", ");
     }
+    var GKEY = "AIzaSyBPd2trB8yv18a4xxwyX6qthSn0THpjEM8", token = newToken();
+    function newToken() { try { return (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(16).slice(2); } catch (e) { return String(Date.now()); } }
+    function googleSuggest(q) {
+      return fetch("https://places.googleapis.com/v1/places:autocomplete", {
+        method: "POST", referrerPolicy: "no-referrer-when-downgrade",
+        headers: { "Content-Type": "application/json", "X-Goog-Api-Key": GKEY },
+        body: JSON.stringify({ input: q, sessionToken: token, includedRegionCodes: ["us"], locationBias: { circle: { center: { latitude: 41.9, longitude: -87.85 }, radius: 50000 } } })
+      }).then(function (r) { if (!r.ok) throw new Error("g" + r.status); return r.json(); }).then(function (d) {
+        var all = (d.suggestions || []).map(function (s) { return s.placePrediction; }).filter(Boolean);
+        var addr = all.filter(function (p) { var t = p.types || []; return t.indexOf("street_address") >= 0 || t.indexOf("premise") >= 0 || t.indexOf("subpremise") >= 0; });
+        return (addr.length ? addr : all).map(function (p) { return ((p.text && p.text.text) || "").replace(/,\s*USA$/, ""); }).filter(Boolean);
+      });
+    }
+    function photonSuggest(q) {
+      return fetch("https://photon.komoot.io/api/?limit=6&lang=en&lat=41.9&lon=-87.85&q=" + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var seen = {}, out = [];
+          (d.features || []).forEach(function (f) {
+            var p = f.properties || {}; if (p.countrycode && p.countrycode !== "US") return;
+            var t = line(p); if (t && !seen[t]) { seen[t] = 1; out.push(t); }
+          });
+          return out;
+        });
+    }
     function show(items) {
       list.innerHTML = "";
       items.forEach(function (t) {
         var li = document.createElement("li"), b = document.createElement("button");
         b.type = "button"; b.textContent = t;
         b.addEventListener("pointerdown", function (e) { e.preventDefault(); });
-        b.addEventListener("click", function () { input.value = t; list.innerHTML = ""; input.dispatchEvent(new Event("input", { bubbles: true })); var pin = document.getElementById("setPin"); if (pin) pin.focus(); });
+        b.addEventListener("click", function () { input.value = t; list.innerHTML = ""; token = newToken(); input.dispatchEvent(new Event("input", { bubbles: true })); var pin = document.getElementById("setPin"); if (pin) pin.focus(); });
         li.appendChild(b); list.appendChild(li);
       });
     }
@@ -688,17 +713,9 @@ img { max-width: 100%; }
       if (q.length < 4) { list.innerHTML = ""; return; }
       timer = setTimeout(function () {
         var my = ++seq;
-        fetch("https://photon.komoot.io/api/?limit=6&lang=en&lat=41.9&lon=-87.85&q=" + encodeURIComponent(q))
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            if (my !== seq) return;
-            var seen = {}, out = [];
-            (d.features || []).forEach(function (f) {
-              var p = f.properties || {}; if (p.countrycode && p.countrycode !== "US") return;
-              var t = line(p); if (t && !seen[t]) { seen[t] = 1; out.push(t); }
-            });
-            show(out.slice(0, 5));
-          }).catch(function () { list.innerHTML = ""; });
+        googleSuggest(q).then(function (r) { return r.length ? r : photonSuggest(q); }, function () { return photonSuggest(q); })
+          .then(function (out) { if (my === seq) show(out.slice(0, 5)); })
+          .catch(function () { if (my === seq) list.innerHTML = ""; });
       }, 350);
     });
     input.addEventListener("keydown", function (e) { if (e.key === "Tab" && list.firstChild && !e.shiftKey) { e.preventDefault(); list.querySelector("button").focus(); } });
