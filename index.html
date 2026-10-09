@@ -317,7 +317,7 @@ img { max-width: 100%; }
 <section class="sheet" id="sheet" hidden aria-label="Host tools">
   <div class="wrap">
     <div class="bar">
-      <h2>Host tools <small style="font-size:.5em;opacity:.6;font-weight:400">v18</small></h2>
+      <h2>Host tools <small style="font-size:.5em;opacity:.6;font-weight:400">v20</small></h2>
       <button class="btn ghost" type="button" id="closeHost">Back to sign-in</button>
     </div>
     <div id="hostStage"></div>
@@ -617,7 +617,7 @@ img { max-width: 100%; }
 
   /* Auto-fit: shrink everything (rem based) until the sign-in screen fits the visible height. Works around Safari's toolbars. */
   (function () {
-    var root = document.documentElement, guest = document.getElementById("guestView"), pending = 0;
+    var root = document.documentElement, guest = document.getElementById("guestView"), pending = 0, maxH = 0, maxW = 0;
     function need() {
       var r = guest.getBoundingClientRect();
       var pad = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
@@ -626,12 +626,17 @@ img { max-width: 100%; }
     function fit() {
       pending = 0;
       if (guest.hidden || guest.offsetParent === null) return;
+      var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      if (vh > maxH || maxW !== window.innerWidth) { maxH = Math.max(vh, window.innerHeight); maxW = window.innerWidth; }
+      var ae = document.activeElement, typing = ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA");
+      if (typing && vh < maxH * 0.8) return; /* on-screen keyboard is open: keep the current size, do not shrink */
       var h = window.visualViewport ? Math.min(window.innerHeight, window.visualViewport.height) : window.innerHeight;
       var s = 16; root.style.fontSize = s + "px";
       while (s > 8 && (need() > h + 0.5 || root.scrollWidth > window.innerWidth + 1)) { s -= 0.5; root.style.fontSize = s + "px"; }
     }
     function sched() { if (!pending) pending = requestAnimationFrame(fit); }
     window.addEventListener("resize", sched);
+    document.addEventListener("focusout", function () { setTimeout(sched, 350); }, true);
     window.addEventListener("orientationchange", function () { setTimeout(fit, 250); });
     if (window.visualViewport) window.visualViewport.addEventListener("resize", sched);
     window.addEventListener("load", function () { fit(); setTimeout(fit, 400); });
@@ -667,6 +672,31 @@ img { max-width: 100%; }
       if (n < 0 || n >= list.length) return;
       e.preventDefault(); list[n].focus();
     });
+  })();
+  /* Stronger Tab catch for iPad hardware keyboards: listen at window level, and if the system still steals focus, move it ourselves */
+  (function () {
+    var ids = ["first", "last", "phone", "email"], lastTab = 0, from = null, dir = 1;
+    function nextOf(el, d) {
+      var i = ids.indexOf(el && el.id); if (i < 0) return null;
+      var n = i + d; if (n < 0 || n >= ids.length) return null;
+      return document.getElementById(ids[n]);
+    }
+    window.addEventListener("keydown", function (e) {
+      if (!(e.key === "Tab" || e.keyCode === 9) || e.altKey || e.ctrlKey || e.metaKey) return;
+      var a = document.activeElement; if (!a || ids.indexOf(a.id) < 0) return;
+      from = a; dir = e.shiftKey ? -1 : 1; lastTab = Date.now();
+      var n = nextOf(a, dir);
+      if (n) { e.preventDefault(); e.stopPropagation(); n.focus(); }
+    }, true);
+    document.addEventListener("focusout", function (e) {
+      if (!from || Date.now() - lastTab > 400) return;
+      var f = from; from = null;
+      setTimeout(function () {
+        var a = document.activeElement;
+        if (a && a !== document.body && a.id !== f.id && ids.indexOf(a.id) >= 0) return;
+        var n = nextOf(f, dir); if (n) n.focus();
+      }, 30);
+    }, true);
   })();
   (function () {
     ["first", "last", "phone"].forEach(function (id, k, arr) {
