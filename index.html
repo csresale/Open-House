@@ -7,22 +7,22 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Open house">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#1B2A4A">
+<meta name="theme-color" content="#B45A4C">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Open house sign-in</title>
 <style>
 /* Layout: one calm, wide-touch form on the left-aligned page; host tools live in a full-screen sheet behind a PIN. */
 :root {
-  --bg: #EEF1F5;
+  --bg: #F2F3F4;
   --surface: #FFFFFF;
-  --ink: #141C2E;
-  --muted: #5A6578;
-  --line: #D2D8E2;
-  --accent: #1B2A4A;
+  --ink: #343C40;
+  --muted: #66727A;
+  --line: #D9DEE1;
+  --accent: #B45A4C;
   --accent-ink: #FFFFFF;
-  --accent-soft: #E3E8F1;
-  --gold: #8A6A14;
+  --accent-soft: #F5E3DF;
+  --label: #A44F41;
   --warn: #B3402A;
   --ok: #1F7A4D;
   --font-display: "Avenir Next", "Avenir", "Helvetica Neue", Arial, sans-serif;
@@ -30,14 +30,14 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0F1420; --surface: #171E2E; --ink: #E9ECF3; --muted: #98A2B8; --line: #2A3450;
-    --accent: #D4AF5A; --accent-ink: #14192B; --accent-soft: #26304A; --gold: #D4AF5A; --warn: #FF8F78; --ok: #6CD39A;
+    --bg: #161A1C; --surface: #1F2528; --ink: #ECEEEF; --muted: #A0ACB2; --line: #333C41;
+    --accent: #E58A78; --accent-ink: #1B1210; --accent-soft: #3A2A27; --label: #E58A78; --warn: #FF8F78; --ok: #6CD39A;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0F1420; --surface: #171E2E; --ink: #E9ECF3; --muted: #98A2B8; --line: #2A3450;
-  --accent: #D4AF5A; --accent-ink: #14192B; --accent-soft: #26304A; --gold: #D4AF5A; --warn: #FF8F78; --ok: #6CD39A;
+  --bg: #161A1C; --surface: #1F2528; --ink: #ECEEEF; --muted: #A0ACB2; --line: #333C41;
+  --accent: #E58A78; --accent-ink: #1B1210; --accent-soft: #3A2A27; --label: #E58A78; --warn: #FF8F78; --ok: #6CD39A;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -52,7 +52,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 .wrap { max-width: 46rem; margin-inline: auto; display: grid; gap: 1.5rem; }
 .top { display: grid; gap: 0.35rem; min-width: 0; }
-.eyebrow { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+.eyebrow { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
 h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 6vw, 3rem); line-height: 1.05; margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
 .sub { color: var(--muted); margin: 0; }
 .brand { background: #FFFFFF; border: 1px solid var(--line); border-radius: 16px; padding: 0.9rem 1.25rem; }
@@ -107,10 +107,26 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); outline
 }
 
 /* Thank-you screen */
-.thanks { position: fixed; inset: 0; z-index: 30; background: var(--accent); color: var(--accent-ink); display: grid; align-content: center; justify-items: start; gap: 1rem; padding: 2rem 1.5rem; }
-.thanks h2 { font-family: var(--font-display); font-size: clamp(2.4rem, 9vw, 4.5rem); line-height: 1; margin: 0; max-width: 14ch; text-wrap: balance; overflow-wrap: anywhere; }
-.thanks p { margin: 0; font-size: 1.3rem; max-width: 28rem; }
-.thanks .btn { background: var(--accent-ink); color: var(--accent); }
+.thanks { position: fixed; inset: 0; z-index: 30; background: var(--surface); color: var(--ink); display: grid; grid-template-rows: 1fr auto; padding-inline: 1.5rem; padding-block: calc(1.5rem + env(safe-area-inset-top, 0px)) calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
+.thanks-body { align-self: center; justify-self: center; display: grid; justify-items: center; gap: 1.1rem; text-align: center; max-width: 30rem; min-width: 0; }
+.tick { width: 6.5rem; height: 6.5rem; }
+.tick .disc { fill: var(--accent); }
+.tick .mark { fill: none; stroke: var(--accent-ink); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 80; }
+.thanks h2 { font-family: var(--font-display); font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1.05; margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
+.thanks p { margin: 0; font-size: 1.25rem; color: var(--muted); }
+.thanks .btn { margin-top: 0.4rem; min-width: 12rem; }
+.thanks-foot { display: grid; gap: 1rem; justify-items: center; }
+.thanks-foot .brand { padding: 0.55rem 0.9rem; }
+.thanks-foot .brand img { width: 15rem; }
+.cd { width: min(100%, 24rem); display: grid; gap: 0.4rem; justify-items: center; font-size: 0.85rem; color: var(--muted); }
+.cd-track { width: 100%; height: 0.35rem; border-radius: 999px; background: var(--line); overflow: hidden; }
+.cd-fill { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left; }
+.cd-fill.run { animation: drain 6s linear forwards; }
+@keyframes drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: no-preference) {
+  .tick .mark { animation: draw 0.5s 0.15s ease-out backwards; }
+  @keyframes draw { from { stroke-dashoffset: 80; } }
+}
 
 /* Host sheet */
 .sheet { position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow-y: auto; padding-inline: 1.25rem; padding-block: calc(1.25rem + env(safe-area-inset-top, 0px)) calc(3rem + env(safe-area-inset-bottom, 0px)); }
@@ -212,9 +228,16 @@ img { max-width: 100%; }
 <button class="hostbtn" id="hostBtn" type="button">Host</button>
 
 <section class="thanks" id="thanks" hidden aria-live="polite">
-  <h2 id="thanksH">Thanks for signing in</h2>
-  <p>Enjoy the tour. Ask me anything about the home.</p>
-  <button class="btn" type="button" id="nextGuest">Next guest</button>
+  <div class="thanks-body">
+    <svg class="tick" viewBox="0 0 96 96" aria-hidden="true"><circle class="disc" cx="48" cy="48" r="48"></circle><path class="mark" d="M27 49l14 14 28-30"></path></svg>
+    <h2 id="thanksH">Thanks for signing in</h2>
+    <p>You are signed in. Enjoy the tour and ask me anything about the home.</p>
+    <button class="btn" type="button" id="nextGuest">Next guest</button>
+  </div>
+  <div class="thanks-foot">
+    <div class="brand"><img id="thanksLogo" alt="Homes by Carmen and Compass"></div>
+    <div class="cd"><span>Returning to sign-in</span><span class="cd-track"><i class="cd-fill" id="thanksBar"></i></span></div>
+  </div>
 </section>
 
 <section class="sheet" id="sheet" hidden aria-label="Host tools">
@@ -294,7 +317,12 @@ img { max-width: 100%; }
     renderGuest(); renderHost();
   });
 
-  function showThanks() { $("thanks").hidden = false; clearTimeout(thanksTimer); thanksTimer = setTimeout(hideThanks, 6000); }
+  function showThanks() {
+    $("thanks").hidden = false;
+    var f = $("thanksBar"); f.classList.remove("run"); void f.offsetWidth; f.classList.add("run");
+    clearTimeout(thanksTimer);
+    thanksTimer = setTimeout(hideThanks, 6000);
+  }
   function hideThanks() { clearTimeout(thanksTimer); $("thanks").hidden = true; $("first").focus(); }
   $("nextGuest").addEventListener("click", hideThanks);
 
@@ -460,6 +488,7 @@ img { max-width: 100%; }
   document.addEventListener("pointerdown", wake, { once: true });
   wake();
 
+  (function () { var tl = $("thanksLogo"), bl = document.querySelector(".brand img"); if (tl && bl) tl.src = bl.src; })();
   if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }
 
   renderGuest();
