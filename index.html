@@ -480,7 +480,7 @@ img { max-width: 100%; }
         var id = newEventId();
         state.events.push({ id: id, address: a, startedAt: Date.now() });
         state.eventId = id; viewEvent = id; save();
-        $("newAddr").value = ""; renderGuest(); updateOpen(); fillAddr();
+        $("newAddr").value = ""; var sg = $("newAddr").parentNode.querySelector(".sugg"); if (sg) sg.innerHTML = ""; renderGuest(); updateOpen(); fillAddr();
         m.className = "msg ok"; m.textContent = "New open house started. Guests now sign in to it.";
       });
       var delTimer = 0;
@@ -506,6 +506,7 @@ img { max-width: 100%; }
         b.classList.remove("armed"); b.textContent = "Delete open house";
         m.className = "msg ok"; m.textContent = state.events.length ? "Open house deleted." : "Open house deleted. Start a new one below.";
       });
+      if (window.attachSuggest) { window.attachSuggest($("newAddr")); window.attachSuggest($("addrEdit")); }
       fillAddr();
     }
   }
