@@ -1,4 +1,4 @@
-const CACHE = "open-house-v17";
+const CACHE = "open-house-v18";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 self.addEventListener("install", (e) => {
   e.waitUntil(
