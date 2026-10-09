@@ -155,17 +155,19 @@ body { min-height: 100dvh; overscroll-behavior: none; padding-block: clamp(0.5re
 @media (min-width: 40rem) {
   #form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap) 1.25rem; align-content: start; }
   #form > * { grid-column: 1 / -1; }
-  #form [aria-labelledby="agentLbl"] { grid-column: 1; order: 1; }
-  #form [aria-labelledby="paLbl"] { grid-column: 2; order: 2; }
-  #form [aria-labelledby="timeLbl"] { order: 3; }
-  #form .grid2 { order: 0; }
-  #form .field:last-of-type { order: 4; }
-  #form .msg { order: 5; } #form .btn { order: 6; } #form .fine { order: 7; }
+  #form [aria-labelledby="agentLbl"] { grid-column: 1; }
+  #form [aria-labelledby="paLbl"] { grid-column: 2; }
 }
 @media (min-width: 62rem) {
   #guestView .hero .me { height: clamp(11rem, 36dvh, 19rem); justify-self: start; }
   #guestView .hero { align-items: start; }
 }
+
+/* Address suggestions (host setup) */
+.sugg { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
+.sugg:empty { display: none; }
+.sugg button { width: 100%; text-align: left; min-height: 3rem; padding: 0.55rem 0.9rem; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 1rem; cursor: pointer; }
+.sugg button:hover, .sugg button:focus-visible { border-color: var(--accent); background: var(--accent-soft); outline: none; }
 
 /* Thank-you screen */
 .thanks { position: fixed; inset: 0; z-index: 30; background: var(--surface); color: var(--ink); display: grid; grid-template-rows: 1fr auto; padding-inline: 1.5rem; padding-block: calc(1.5rem + env(safe-area-inset-top, 0px)) calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
@@ -263,6 +265,15 @@ img { max-width: 100%; }
       </div>
     </div>
 
+    <div class="field" role="radiogroup" aria-labelledby="paLbl">
+      <span class="lbl" id="paLbl">Are you pre-approved for a mortgage? <span class="opt">(optional)</span></span>
+      <div class="choices">
+        <input type="radio" name="preapproved" id="pa1" value="Yes"><label for="pa1">Yes</label>
+        <input type="radio" name="preapproved" id="pa2" value="No"><label for="pa2">No</label>
+        <input type="radio" name="preapproved" id="pa3" value="Not sure"><label for="pa3">Not sure</label>
+      </div>
+    </div>
+
     <div class="field" role="radiogroup" aria-labelledby="timeLbl">
       <span class="lbl" id="timeLbl">When are you hoping to buy? <span class="opt">(optional)</span></span>
       <div class="choices">
@@ -270,15 +281,6 @@ img { max-width: 100%; }
         <input type="radio" name="timeline" id="t2" value="1 to 3 months"><label for="t2">1 to 3 months</label>
         <input type="radio" name="timeline" id="t3" value="3 to 6 months"><label for="t3">3 to 6 months</label>
         <input type="radio" name="timeline" id="t4" value="Just looking"><label for="t4">Just looking</label>
-      </div>
-    </div>
-
-    <div class="field" role="radiogroup" aria-labelledby="paLbl">
-      <span class="lbl" id="paLbl">Are you pre-approved for a mortgage? <span class="opt">(optional)</span></span>
-      <div class="choices">
-        <input type="radio" name="preapproved" id="pa1" value="Yes"><label for="pa1">Yes</label>
-        <input type="radio" name="preapproved" id="pa2" value="No"><label for="pa2">No</label>
-        <input type="radio" name="preapproved" id="pa3" value="Not sure"><label for="pa3">Not sure</label>
       </div>
     </div>
 
@@ -419,6 +421,7 @@ img { max-width: 100%; }
         '<div class="field"><label class="lbl" for="setAddr">Property address</label><input type="text" id="setAddr" autocapitalize="words" autocomplete="off"></div>' +
         '<div class="field"><label class="lbl" for="setPin">Host PIN</label><input type="password" id="setPin" class="pin" inputmode="numeric" maxlength="4" autocomplete="off"></div>' +
         '<p class="msg" id="setMsg"></p><button class="btn" type="submit">Start open house</button></form>';
+      if (window.attachSuggest) window.attachSuggest($("setAddr"));
       $("setupForm").addEventListener("submit", function (e) {
         e.preventDefault();
         var a = $("setAddr").value.trim(), p = $("setPin").value.trim(), m = $("setMsg");
@@ -603,6 +606,78 @@ img { max-width: 100%; }
     var f = document.getElementById("form"); if (f) new MutationObserver(sched).observe(f, { childList: true, subtree: true, characterData: true });
     fit();
   })();
+
+  /* Keyboard Tab order for the guest form (Safari skips the hidden radio buttons, so we move focus ourselves) */
+  (function () {
+    var form = document.getElementById("form"); if (!form) return;
+    function stops() {
+      var out = [];
+      ["first", "last", "phone", "email"].forEach(function (id) { out.push(document.getElementById(id)); });
+      ["agent", "preapproved", "timeline"].forEach(function (n) {
+        var r = form.querySelectorAll('input[name="' + n + '"]');
+        var c = form.querySelector('input[name="' + n + '"]:checked');
+        out.push(c || r[0]);
+      });
+      out.push(document.getElementById("notes"), document.getElementById("submit"));
+      return out.filter(function (x) { return x && !x.disabled; });
+    }
+    function indexOfActive(list) {
+      var a = document.activeElement; if (!a) return -1;
+      if (a.type === "radio") { for (var i = 0; i < list.length; i++) if (list[i].name === a.name) return i; }
+      return list.indexOf(a);
+    }
+    form.addEventListener("keydown", function (e) {
+      if (e.key !== "Tab" || e.altKey || e.ctrlKey || e.metaKey) return;
+      var list = stops(), i = indexOfActive(list); if (i < 0) return;
+      var n = i + (e.shiftKey ? -1 : 1);
+      if (n < 0 || n >= list.length) return;
+      e.preventDefault(); list[n].focus();
+    });
+  })();
+
+  /* Free address suggestions (Photon, OpenStreetMap data). Quietly does nothing when offline. */
+  window.attachSuggest = function (input) {
+    if (!input || !window.fetch) return;
+    var list = document.createElement("ul"); list.className = "sugg"; list.setAttribute("aria-label", "Address suggestions");
+    input.parentNode.appendChild(list);
+    var timer = 0, seq = 0;
+    function line(p) {
+      var street = [p.housenumber, p.street].filter(Boolean).join(" ") || p.name || "";
+      var st = p.state ? (({Illinois:"IL",Florida:"FL",Indiana:"IN",Wisconsin:"WI"})[p.state] || p.state) : "";
+      var tail = [p.city || p.district || p.county, [st, p.postcode].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+      return [street, tail].filter(Boolean).join(", ");
+    }
+    function show(items) {
+      list.innerHTML = "";
+      items.forEach(function (t) {
+        var li = document.createElement("li"), b = document.createElement("button");
+        b.type = "button"; b.textContent = t;
+        b.addEventListener("pointerdown", function (e) { e.preventDefault(); });
+        b.addEventListener("click", function () { input.value = t; list.innerHTML = ""; input.dispatchEvent(new Event("input", { bubbles: true })); var pin = document.getElementById("setPin"); if (pin) pin.focus(); });
+        li.appendChild(b); list.appendChild(li);
+      });
+    }
+    input.addEventListener("input", function () {
+      clearTimeout(timer);
+      var q = input.value.trim();
+      if (q.length < 4) { list.innerHTML = ""; return; }
+      timer = setTimeout(function () {
+        var my = ++seq;
+        fetch("https://photon.komoot.io/api/?limit=6&lang=en&lat=41.9&lon=-87.85&q=" + encodeURIComponent(q))
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (my !== seq) return;
+            var seen = {}, out = [];
+            (d.features || []).forEach(function (f) {
+              var p = f.properties || {}; if (p.countrycode && p.countrycode !== "US") return;
+              var t = line(p); if (t && !seen[t]) { seen[t] = 1; out.push(t); }
+            });
+            show(out.slice(0, 5));
+          }).catch(function () { list.innerHTML = ""; });
+      }, 350);
+    });
+    input.addEventListener("keydown", function (e) { if (e.key === "Tab" && list.firstChild && !e.shiftKey) { e.preventDefault(); list.querySelector("button").focus(); } });
+  };
 </script>
 </body>
 </html>
