@@ -459,7 +459,9 @@ img { max-width: 100%; }
         '<button class="btn ghost" type="button" id="addrSave">Save address</button></div></div>' +
         '<div class="card"><div class="row"><div class="field"><label class="lbl" for="newAddr">Start a new open house</label><input type="text" id="newAddr" placeholder="New property address" autocapitalize="words" autocomplete="off"></div>' +
         '<button class="btn ghost" type="button" id="newBtn">Start new</button></div>' +
-        '<p class="fine">Earlier sign-ins stay saved. Pick them from the list at the top.</p></div>';
+        '<p class="fine">Earlier sign-ins stay saved. Pick them from the list at the top.</p></div>' +
+        '<div class="card"><div class="row"><div class="field"><span class="lbl">Delete the open house shown at the top</span><span class="fine">Removes it and all of its sign-ins from this iPad. Export the CSV first.</span></div>' +
+        '<button class="btn ghost del" type="button" id="delEv">Delete open house</button></div></div>';
       $("lockBtn").addEventListener("click", function () { unlocked = false; renderHost(); });
       $("evSel").addEventListener("change", function () { viewEvent = $("evSel").value; fillAddr(); updateOpen(true); });
       $("exportBtn").addEventListener("click", exportCsv);
@@ -478,6 +480,29 @@ img { max-width: 100%; }
         state.eventId = id; viewEvent = id; save();
         $("newAddr").value = ""; renderGuest(); updateOpen(); fillAddr();
         m.className = "msg ok"; m.textContent = "New open house started. Guests now sign in to it.";
+      });
+      var delTimer = 0;
+      $("delEv").addEventListener("click", function () {
+        var b = $("delEv"), ev = eventById(viewEvent), m = $("hostMsg");
+        if (!ev) { m.className = "msg"; m.textContent = "No open house to delete."; return; }
+        if (!b.classList.contains("armed")) {
+          var n = eventGuests().length;
+          b.classList.add("armed"); b.textContent = "Tap again to delete (" + n + " sign-in" + (n === 1 ? "" : "s") + ")";
+          clearTimeout(delTimer);
+          delTimer = setTimeout(function () { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Delete open house"; } }, 5000);
+          return;
+        }
+        clearTimeout(delTimer);
+        var id = ev.id;
+        state.events = state.events.filter(function (x) { return x.id !== id; });
+        state.guests = state.guests.filter(function (g) { return g.eventId !== id; });
+        if (state.eventId === id) {
+          var rest = state.events.slice().sort(function (x, y) { return y.startedAt - x.startedAt; });
+          state.eventId = rest.length ? rest[0].id : "";
+        }
+        viewEvent = state.eventId; save(); renderGuest(); updateOpen(); fillAddr();
+        b.classList.remove("armed"); b.textContent = "Delete open house";
+        m.className = "msg ok"; m.textContent = state.events.length ? "Open house deleted." : "Open house deleted. Start a new one below.";
       });
       fillAddr();
     }
